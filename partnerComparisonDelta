@@ -1,0 +1,124 @@
+# This was originally put together in peicemeal fashion through the platform I worked in
+# I've reconstructed it into a single SQL query, but wanted to explain why there are no comments
+
+SELECT 
+	PartnerPK,CompanyName,
+	
+	ROUND((
+		(SUM(IF(o.OrderStatusCodeFK = 46 AND ((DATEDIFF(o.DateCreated, CURDATE()) * -1) < 90),o.OrderTotal,0))) 
+			/ CASE WHEN BranchRevenue = 0 THEN 1 ELSE BranchRevenue END) * 100,1) AS AFQBranchRevenueDelta,
+	
+	CASE 
+		WHEN ((SUM(IF(OrderStatusCodeFK = 46 AND((DATEDIFF(o.DateCreated,CURDATE()) * -1) < 60),OrderTotal,0)) / 2)
+				- (SUM(IF(OrderStatusCodeFK = 46,OrderTotal,0)) / 6)) 
+			/ (SUM(IF(OrderStatusCodeFK = 46,OrderTotal,0)) / 6) > .2
+			THEN 'Images/deltaUp.png'
+		WHEN ((SUM(IF(OrderStatusCodeFK = 46 AND((DATEDIFF(o.DateCreated,CURDATE()) * -1) < 60),OrderTotal,0)) / 2)
+				- (SUM(IF(OrderStatusCodeFK = 46,OrderTotal,0)) / 6))
+			/ (SUM(IF(OrderStatusCodeFK = 46,OrderTotal,0)) / 6) < -.2
+			THEN 'Images/deltaDown.png'
+		ELSE 'Images/deltaSame.png' END AS AFQRevenueDeltaImg,
+	
+	CASE 
+		WHEN (SUM(IF(o.OrderStatusCodeFK = 46,o.OrderTotal,0)) / 6) > 0 
+			THEN ROUND((
+				((SUM(IF(o.OrderStatusCodeFK = 46 AND ((DATEDIFF(o.DateCreated,CURDATE())*-1) < 60),o.OrderTotal,0)) / 2) - 
+					(SUM(IF(o.OrderStatusCodeFK = 46,o.OrderTotal,0)) / 6)) 
+				/ (SUM(IF(o.OrderStatusCodeFK = 46,o.OrderTotal,0)) / 6)) * 100,1) 
+		ELSE 0 END AS AFQRevenueDelta,
+	
+	CASE 
+		WHEN ROUND((
+			((SUM(IF(oc.TeamFK = 5 AND ((DATEDIFF(o.DateCreated,CURDATE()) * -1) < 60),1,0)) / 2) - (SUM(IF(oc.TeamFK = 5,1,0)) / 6)) 
+			/ (SUM(IF(oc.TeamFK = 5,1,0)) / 6)) * 100,0) > 20 
+			THEN 'Images/deltaUp.png' 
+		WHEN ROUND((
+			((SUM(IF(oc.TeamFK = 5 AND ((DATEDIFF(o.DateCreated,CURDATE()) * -1) < 60),1,0)) / 2) - (SUM(IF(oc.TeamFK = 5,1,0)) / 6)) 
+			/ (SUM(IF(oc.TeamFK = 5,1,0)) / 6)) * 100,0) < -20 
+			THEN 'Images/deltaDown.png' 
+		ELSE 'Images/deltaSame.png' END AS AFQLeadsDeltaImg,
+	
+	CASE 
+		WHEN (SUM(IF(oc.TeamFK = 5,1,0)) / 6) > 0 
+			THEN ROUND((
+				((SUM(IF(oc.TeamFK = 5 AND ((DATEDIFF(o.DateCreated,CURDATE()) * -1) < 60),1,0)) / 2) - (SUM(IF(oc.TeamFK = 5,1,0)) / 6)) 
+				/ (SUM(IF(oc.TeamFK = 5,1,0)) / 6)) * 100,1) 
+		ELSE 0 END AS AFQLeadsDelta,
+	
+	CASE 
+		WHEN 
+			((SUM(IF(OrderStatusCodeFK = 46 AND TeamFK = 5 AND (DATEDIFF(o.DateCreated,CURDATE()) * -1) < 60,1,0)) / 2)
+				- (SUM(IF(OrderStatusCodeFK = 46 AND TeamFK = 5,1,0)) / 6))
+			/ (SUM(IF(OrderStatusCodeFK = 46 AND TeamFK=5,1,0)) / 6) > .2
+			THEN 'Images/deltaUp.png' 
+		WHEN 
+			((SUM(IF(OrderStatusCodeFK = 46 AND TeamFK = 5 AND (DATEDIFF(o.DateCreated,CURDATE()) * -1) < 60,1,0)) / 2)
+				- (SUM(IF(OrderStatusCodeFK = 46 AND TeamFK = 5,1,0)) / 6))
+			/(SUM(IF(OrderStatusCodeFK = 46 AND TeamFK = 5,1,0)) / 6) < -.2
+			THEN 'Images/deltaDown.png'
+		ELSE 'Images/deltaSame.png' END AS AFQLeaksDeltaImg,
+	
+	CASE 
+		WHEN (SUM(IF(o.OrderStatusCodeFK = 46 AND oc.TeamFK = 5,1,0)) / 6) > 0 
+			THEN ROUND(((
+				(SUM(IF(o.OrderStatusCodeFK = 46 AND oc.TeamFK = 5 AND ((DATEDIFF(o.DateCreated,CURDATE()) * -1) < 60),1,0)) / 2) 
+					- (SUM(IF(o.OrderStatusCodeFK = 46 AND oc.TeamFK = 5,1,0)) / 6))
+				/ (SUM(IF(o.OrderStatusCodeFK = 46 AND oc.TeamFK = 5,1,0)) / 6)) * 100,1) 
+		ELSE 0 END AS AFQLeakDelta,
+	
+	CASE 
+		WHEN
+			((SUM(IF(OrderStatusCodeFK = 46 AND TeamFK = 7 AND (DATEDIFF(o.DateCreated,CURDATE()) * -1) < 60,1,0)) / 2)
+				- (SUM(IF(OrderStatusCodeFK = 46 AND TeamFK = 7,1,0)) / 6))
+			/ (SUM(IF(OrderStatusCodeFK = 46 AND TeamFK = 7,1,0)) / 6) > .2
+			THEN 'Images/deltaUp.png'
+		WHEN
+			((SUM(IF(OrderStatusCodeFK = 46 AND TeamFK = 7 AND (DATEDIFF(o.DateCreated,CURDATE()) * -1) < 60,1,0)) / 2)
+				- (SUM(IF(OrderStatusCodeFK = 46 AND TeamFK = 7,1,0)) / 6))/
+			(SUM(IF(OrderStatusCodeFK = 46 AND TeamFK = 7,1,0)) / 6) < -.2
+			THEN 'Images/deltaDown.png'
+		ELSE 'Images/deltaSame.png' END AS AFQRepairDeltaImg,
+	
+	CASE 
+		WHEN (SUM(IF(o.OrderStatusCodeFK = 46 AND oc.TeamFK = 7,1,0))/6) > 0 
+			THEN ROUND((
+				((SUM(IF(o.OrderStatusCodeFK = 46 AND oc.TeamFK = 7 AND ((DATEDIFF(o.DateCreated,CURDATE()) * -1) < 60),1,0)) / 2) 
+					- (SUM(IF(o.OrderStatusCodeFK = 46 AND oc.TeamFK = 7,1,0)) / 6)) /	
+				(SUM(IF(o.OrderStatusCodeFK = 46 AND oc.TeamFK = 7,1,0)) / 6)) * 100,1) 
+		ELSE 0 END AS AFQRepairDelta,
+	
+	pt1.TierName,c2.CodeTitle,b.BranchName,c4.CodeTitle,
+	
+	ROUND((
+		(SUM(IF(o.OrderStatusCodeFK = 46 AND ((DATEDIFF(o.DateCreated, CURDATE())*-1) < 90),o.OrderTotal,0))) 
+		/ TotalRevenue)*100,2) AS PercentageOfRevenue,
+	
+	PoolCount,pt2.TierName,pt3.TierName 
+	
+FROM workorder o
+JOIN partner p ON o.PartnerFK = p.PartnerPK
+JOIN ordercategory oc ON o.OrderCategoryFK = oc.CategoryPK
+JOIN branch b ON p.BranchFK = b.BranchPK
+JOIN v_partnerinfo pi ON p.PartnerPK = pi.PartnerFK
+JOIN partnertier pt1 ON p.PartnerTierFK = pt1.PartnerTierPK
+JOIN partnertier pt2 ON p.ProjectedTierFK = pt2.PartnerTierPK
+JOIN partnertier pt3 ON p.TierOverrideFK = pt3.PartnerTierPK
+JOIN code c2 ON p.PartnerStageCodeFK = c2.CodePK
+JOIN code c4 ON p.PartnerStatusCodeFK = c4.CodePK
+
+JOIN (SELECT 
+	SUM(o.OrderTotal) AS TotalRevenue 
+	FROM workorder o JOIN partner p ON o.PartnerFK = p.PartnerPK JOIN ordercategory oc ON o.OrderCategoryFK = oc.CategoryPK 
+	WHERE (o.isDel = 0 AND o.OrderStatusCodeFK = 46 AND p.isDel = 0 AND oc.CategoryPK != 132 AND (DATEDIFF(o.DateCreated, CURDATE())*-1) < 90)) totalRevenue
+
+JOIN (SELECT 
+	SUM(o.OrderTotal) AS BranchRevenue,p.BranchFK 
+	FROM workorder o JOIN partner p ON o.PartnerFK = p.PartnerPK JOIN ordercategory oc ON o.OrderCategoryFK = oc.CategoryPK 
+	WHERE (o.isDel = 0 AND o.OrderStatusCodeFK = 46 AND p.isDel = 0 AND oc.CategoryPK != 132 AND (DATEDIFF(o.DateCreated, CURDATE())*-1) < 90) 
+	GROUP BY BranchFK) branchRevenue ON p.BranchFK = branchRevenue.BranchFK 
+	
+WHERE (o.isDel = 0 AND p.isDel = 0 AND oc.CategoryPK != 132 AND (DATEDIFF(o.DateCreated,CURDATE()) * -1) < 182) 
+
+GROUP BY PartnerPK 
+ORDER BY AFQBranchRevenueDelta DESC  
+LIMIT 0,50 
